@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="./vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="vendor/autoload.php"
+         colors="true"
+>
+    <testsuites>
+        <testsuite name="Unit">
+            <directory suffix="Test.php">./tests/Unit</directory>
+        </testsuite>
+        <testsuite name="Feature">
+            <directory suffix="Test.php">./tests/Feature</directory>
+        </testsuite>
+    </testsuites>
+    <php>
+        <env name="APP_ENV" value="testing"/>
+
+        <env name="DB_CONNECTION" value="mysql"/>
+        <env name="DB_HOST" value="localhost"/>
+        <env name="DB_PORT" value="3306"/>
+        <env name="DB_DATABASE" value=""/>
+        <env name="DB_USERNAME" value="root"/>
+        <env name="DB_PASSWORD" value=""/>
+
+        <env name="TEST_SHIPPING_ORIGIN_FIRST_NAME" value=""/>
+        <env name="TEST_SHIPPING_ORIGIN_LAST_NAME" value=""/>
+        <env name="TEST_SHIPPING_ORIGIN_COMPANY" value=""/>
+        <env name="TEST_SHIPPING_ORIGIN_LINE1" value=""/>
+        <env name="TEST_SHIPPING_ORIGIN_LINE2" value=""/>
+        <env name="TEST_SHIPPING_ORIGIN_CITY" value=""/>
+        <env name="TEST_SHIPPING_ORIGIN_POSTAL_CODE" value=""/>
+        <env name="TEST_SHIPPING_ORIGIN_STATE" value=""/>
+        <env name="TEST_SHIPPING_ORIGIN_COUNTRY" value=""/>
+
+        <env name="CANADA_POST_CUSTOMER_NUMBER" value=""/>
+        <env name="CANADA_POST_USERNAME" value=""/>
+        <env name="CANADA_POST_PASSWORD" value=""/>
+
+        <env name="UPS_CLIENT_ID" value=""/>
+        <env name="UPS_CLIENT_SECRET" value=""/>
+        <env name="UPS_USER_ID" value=""/>
+        <env name="UPS_ACCOUNT_NUMBER" value=""/>
+
+        <env name="PUROLATOR_KEY" value=""/>
+        <env name="PUROLATOR_PASSWORD" value=""/>
+        <env name="PUROLATOR_BILLING_ACCOUNT" value=""/>
+        <env name="PUROLATOR_REGISTERED_ACCOUNT" value=""/>
+        <env name="PUROLATOR_USER_TOKEN" value=""/>
+
+        <env name="FEDEX_CLIENT_ID" value=""/>
+        <env name="FEDEX_CLIENT_SECRET" value=""/>
+        <env name="FEDEX_ACCOUNT_NUMBER" value=""/>
+
+        <env name="USPS_USERNAME" value=""/>
+        <env name="USPS_PASSWORD" value=""/>
+
+        <env name="SHIPPING_SANDBOX" value="true"/>
+    </php>
+</phpunit>
