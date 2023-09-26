@@ -2,6 +2,18 @@
     "name": "ivanmitrikeski/laravel-shipping",
     "description": "Shipping package for Laravel. Supported providers: CanadaPost, USPS, UPS, FedEx and Purolator.",
     "license": "MIT",
+    "keywords": [
+        "laravel",
+        "ups",
+        "fedex",
+        "rest",
+        "canadapost",
+        "usps",
+        "purolator",
+        "shipping",
+        "rate",
+        "rating"
+    ],
     "authors": [
         {
             "name": "Ivan Mitrikeski",

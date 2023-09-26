@@ -1,5 +1,10 @@
 # Shipping package for Laravel
-Supported shipping providers: CanadaPost, USPS, UPS, FedEx and Purolator.
+Supported shipping providers:
+- UPS REST/OAuth API,
+- FedEx REST/OAuth API,
+- CanadaPost
+- USPS
+- Purolator.
 
 Package can be used outside of Laravel environment as well (by making individual shipping provider requests).
 
