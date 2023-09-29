@@ -164,8 +164,10 @@ class ServiceCanadaPost extends ServiceProvider
 
             $client = new Client();
 
+            $url = $this->credentials->test() ? 'https://ct.soa-gw.canadapost.ca/rs/ship/price' : 'https://soa-gw.canadapost.ca/rs/ship/price';
+
             try {
-                $response = $client->request('POST', 'https://ct.soa-gw.canadapost.ca/rs/ship/price', [
+                $response = $client->request('POST', $url, [
                     'auth' => [$this->credentials->username(), $this->credentials->password()],
                     'headers' => [
                         'Content-Type' => 'application/vnd.cpc.ship.rate-v4+xml',

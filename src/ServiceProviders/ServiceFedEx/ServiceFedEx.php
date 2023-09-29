@@ -198,10 +198,7 @@ class ServiceFedEx extends ServiceProvider
 
         $client = new Client();
 
-        $url = 'https://apis.fedex.com/rate/v1/rates/quotes';
-        if ($this->credentials->test() === true) {
-            $url = 'https://apis-sandbox.fedex.com/rate/v1/rates/quotes';
-        }
+        $url = $this->credentials->test() ? 'https://apis-sandbox.fedex.com/rate/v1/rates/quotes' : 'https://apis.fedex.com/rate/v1/rates/quotes';
 
         try {
             $response = $client->post($url, [
@@ -268,10 +265,7 @@ class ServiceFedEx extends ServiceProvider
 
         $client = new Client();
 
-        $url = 'https://apis.fedex.com/oauth/token';
-        if ($this->credentials->test() === true) {
-            $url = 'https://apis-sandbox.fedex.com/oauth/token';
-        }
+        $url = $this->credentials->test() ? 'https://apis-sandbox.fedex.com/oauth/token' : 'https://apis.fedex.com/oauth/token';
 
         try {
             $response = $client->post($url, [

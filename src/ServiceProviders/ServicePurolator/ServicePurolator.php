@@ -164,12 +164,9 @@ class ServicePurolator extends ServiceProvider
 
         $results = new ServiceProviderRateCollection();
 
-        $location = 'https://webservices.purolator.com/EWS/V2/Estimating/EstimatingService.asmx';
-        if ($this->credentials->test()) {
-            $location = 'https://devwebservices.purolator.com/EWS/V2/Estimating/EstimatingService.asmx';
-        }
+        $location = $this->credentials->test() ? 'https://devwebservices.purolator.com/EWS/V2/Estimating/EstimatingService.asmx' : 'https://webservices.purolator.com/EWS/V2/Estimating/EstimatingService.asmx';
 
-        $client = new SoapClient( "https://devwebservices.purolator.com/EWS/V2/Estimating/EstimatingService.asmx?wsdl", [
+        $client = new SoapClient( $location . '?wsdl', [
             'trace' => true,
             'location' => $location,
             'uri' => "http://purolator.com/pws/datatypes/v2",

@@ -200,10 +200,13 @@ class ServiceUSPS extends ServiceProvider
         $countryName = self::iso2ToCountryName($addressTo->countryCodeIso2());
 
         $requestName = 'RateV4Request';
-        $url = 'https://secure.shippingapis.com/shippingapi.dll?API=RateV4&XML=';
+        $url = $this->credentials->test() ? 'https://stg-secure.shippingapis.com/shippingapi.dll' : 'https://secure.shippingapis.com/shippingapi.dll';
+
         if ($addressFrom->countryCodeIso2() !== 'US' || $addressTo->countryCodeIso2() !== 'US') {
-            $url = 'https://secure.shippingapis.com/shippingapi.dll?API=IntlRateV2&XML=';
+            $url .= '?API=IntlRateV2&XML=';
             $requestName = 'IntlRateV2Request';
+        } else {
+            $url .= '?API=RateV4&XML=';
         }
 
         $packages = '';
