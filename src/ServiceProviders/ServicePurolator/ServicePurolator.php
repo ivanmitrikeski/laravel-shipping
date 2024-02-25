@@ -3,6 +3,7 @@
 namespace Mitrik\Shipping\ServiceProviders\ServicePurolator;
 
 use Exception;
+use GuzzleHttp\Client;
 use Mitrik\Shipping\ServiceProviders\Address\Address;
 use Mitrik\Shipping\ServiceProviders\Box\BoxCollection;
 use Mitrik\Shipping\ServiceProviders\Box\BoxInterface;
@@ -12,12 +13,18 @@ use Mitrik\Shipping\ServiceProviders\Exceptions\InvalidCredentials;
 use Mitrik\Shipping\ServiceProviders\Exceptions\InvalidOriginPostalCode;
 use Mitrik\Shipping\ServiceProviders\Exceptions\InvalidShipmentParameters;
 use Mitrik\Shipping\ServiceProviders\Exceptions\PriceNotFound;
+use Mitrik\Shipping\ServiceProviders\Exceptions\ShipmentNotCreated;
 use Mitrik\Shipping\ServiceProviders\Measurement\Length;
 use Mitrik\Shipping\ServiceProviders\Measurement\Weight;
 use Mitrik\Shipping\ServiceProviders\ServiceProvider;
 use Mitrik\Shipping\ServiceProviders\ServiceProviderRate\ServiceProviderRate;
 use Mitrik\Shipping\ServiceProviders\ServiceProviderRate\ServiceProviderRateCollection;
 use Mitrik\Shipping\ServiceProviders\ServiceProviderService\ServiceProviderService;
+use Mitrik\Shipping\ServiceProviders\ServiceProviderShipment\ServiceProviderShipment;
+use Mitrik\Shipping\ServiceProviders\ServiceProviderShipment\ServiceProviderShipmentCollection;
+use Mitrik\Shipping\ServiceProviders\ServiceProviderShipment\ServiceProviderShipmentCustomsValue;
+use Mitrik\Shipping\ServiceProviders\ShipFrom\ShipFrom;
+use Mitrik\Shipping\ServiceProviders\ShipTo\ShipTo;
 use SoapClient;
 use SoapFault;
 use SoapHeader;
@@ -194,7 +201,6 @@ class ServicePurolator extends ServiceProvider
 
         // Populate the Origin Information
         $request->Shipment->SenderInformation->Address->Name = $addressFrom->fullName();
-        $request->Shipment->SenderInformation->Address->StreetNumber = "1234";
         $request->Shipment->SenderInformation->Address->StreetName = $addressFrom->line1();
         $request->Shipment->SenderInformation->Address->City = $addressFrom->city();
         $request->Shipment->SenderInformation->Address->Province = $addressFrom->stateCodeIso2();
@@ -332,5 +338,228 @@ class ServicePurolator extends ServiceProvider
         }
 
         throw new PriceNotFound('Price not found.');
+    }
+
+    public function ship(ShipFrom $shipFrom, ShipTo $shipTo, BoxCollection $boxes, ServiceProviderService $serviceProviderService, ServiceProviderShipmentCustomsValue|null $serviceProviderShipmentCustomsValue = null, $customData = []): ServiceProviderShipmentCollection
+    {
+        $this->checkForEmptyBoxes($boxes);
+        $this->checkForOverweightBoxes($boxes);
+
+        $client = $this->createShipmentClient();
+
+        $request = new stdClass();
+        $request->Shipment = new stdClass();
+        $request->Shipment->SenderInformation = new stdClass();
+        $request->Shipment->SenderInformation->Address = new stdClass();
+
+        // Populate the Origin Information
+        $request->Shipment->SenderInformation->Address->Name = $shipFrom->name();
+        $request->Shipment->SenderInformation->Address->Company = $shipFrom->company();
+        $request->Shipment->SenderInformation->Address->StreetName = $shipFrom->address()->line1();
+        $request->Shipment->SenderInformation->Address->City = $shipFrom->address()->city();
+        $request->Shipment->SenderInformation->Address->Province = $shipFrom->address()->stateCodeIso2();
+        $request->Shipment->SenderInformation->Address->Country = $shipFrom->address()->countryCodeIso2();
+        $request->Shipment->SenderInformation->Address->PostalCode = $shipFrom->address()->postalCode();
+        $request->Shipment->SenderInformation->Address->PhoneNumber = new stdClass();
+        $request->Shipment->SenderInformation->Address->PhoneNumber->CountryCode = $shipFrom->phone()->countryCode();
+        $request->Shipment->SenderInformation->Address->PhoneNumber->AreaCode = $shipFrom->phone()->areaCode();
+        $request->Shipment->SenderInformation->Address->PhoneNumber->Phone = $shipFrom->phone()->number();
+
+        // Populate the Destination Information
+        $request->Shipment->ReceiverInformation = new stdClass();
+        $request->Shipment->ReceiverInformation->Address = new stdClass();
+        $request->Shipment->ReceiverInformation->Address->Name = $shipTo->name();
+        $request->Shipment->ReceiverInformation->Address->Company = $shipTo->company();
+//        $request->Shipment->ReceiverInformation->Address->StreetNumber = "2245";
+        $request->Shipment->ReceiverInformation->Address->StreetName = $shipTo->address()->line1();
+        $request->Shipment->ReceiverInformation->Address->City = $shipTo->address()->city();
+        $request->Shipment->ReceiverInformation->Address->Province = $shipTo->address()->stateCodeIso2();
+        $request->Shipment->ReceiverInformation->Address->Country = $shipTo->address()->countryCodeIso2();
+        $request->Shipment->ReceiverInformation->Address->PostalCode = $shipTo->address()->postalCode();
+        $request->Shipment->ReceiverInformation->Address->PhoneNumber = new stdClass();
+        $request->Shipment->ReceiverInformation->Address->PhoneNumber->CountryCode = $shipTo->phone()->countryCode();
+        $request->Shipment->ReceiverInformation->Address->PhoneNumber->AreaCode = $shipTo->phone()->areaCode();
+        $request->Shipment->ReceiverInformation->Address->PhoneNumber->Phone = $shipTo->phone()->number();
+
+        // Future Dated Shipments - YYYY-MM-DD format
+        $request->Shipment->ShipmentDate = $shipFrom->shipDate()->format('Y-m-d');
+
+        // Populate the Package Information
+        $request->Shipment->PackageInformation = new stdClass();
+        $request->Shipment->PackageInformation->TotalWeight = new stdClass();
+        $request->Shipment->PackageInformation->TotalWeight->Value = $boxes->weight();
+        $request->Shipment->PackageInformation->TotalWeight->WeightUnit = $boxes->unitOfMeasurementWeight() === Weight::KG ? 'kg' : 'lb';
+        $request->Shipment->PackageInformation->TotalPieces = $boxes->count();
+        $request->Shipment->PackageInformation->ServiceID = $serviceProviderService->serviceCode();
+
+        $request->Shipment->PackageInformation->PiecesInformation = new stdClass();
+        $request->Shipment->PackageInformation->PiecesInformation->Piece = new stdClass();
+
+        $request->Shipment->PackageInformation->PiecesInformation = new stdClass();
+        $request->Shipment->PackageInformation->PiecesInformation->Piece = [];
+
+        // Populate the Payment Information
+        $request->Shipment->PaymentInformation = new stdClass();
+        $request->Shipment->PaymentInformation->PaymentType = "Sender";
+        $request->Shipment->PaymentInformation->BillingAccountNumber = $this->credentials->billingAccount();
+        $request->Shipment->PaymentInformation->RegisteredAccountNumber = $this->credentials->registeredAccount();
+
+        // Populate the Pickup Information
+        $request->Shipment->PickupInformation = new stdClass();
+        $request->Shipment->PickupInformation->PickupType = "DropOff";
+        $request->ShowAlternativeServicesIndicator = "true";
+
+        $results = new ServiceProviderShipmentCollection();
+
+        /** @var BoxInterface $box */
+        foreach ($boxes as $box) {
+            $request->Shipment->PackageInformation->PiecesInformation = new stdClass();
+            $request->Shipment->PackageInformation->PiecesInformation->Piece = [];
+
+            $request->Shipment->PackageInformation->PiecesInformation->Piece[0] = new stdClass();
+
+            $request->Shipment->PackageInformation->PiecesInformation->Piece[0]->Weight = new stdClass();
+            $request->Shipment->PackageInformation->PiecesInformation->Piece[0]->Weight->Value = $box->weight();
+            $request->Shipment->PackageInformation->PiecesInformation->Piece[0]->Weight->WeightUnit = $box->unitOfMeasurementWeight() === Weight::KG ? 'kg' : 'lb';
+
+            $request->Shipment->PackageInformation->PiecesInformation->Piece[0]->Length = new stdClass();
+            $request->Shipment->PackageInformation->PiecesInformation->Piece[0]->Length->Value = $box->length();
+            $request->Shipment->PackageInformation->PiecesInformation->Piece[0]->Length->DimensionUnit = $box->unitOfMeasurementSize() === Length::CM ? 'cm' : "in";
+
+            $request->Shipment->PackageInformation->PiecesInformation->Piece[0]->Width = new stdClass();
+            $request->Shipment->PackageInformation->PiecesInformation->Piece[0]->Width->Value = $box->width();
+            $request->Shipment->PackageInformation->PiecesInformation->Piece[0]->Width->DimensionUnit = $box->unitOfMeasurementSize() === Length::CM ? 'cm' : "in";
+
+            $request->Shipment->PackageInformation->PiecesInformation->Piece[0]->Height = new stdClass();
+            $request->Shipment->PackageInformation->PiecesInformation->Piece[0]->Height->Value = $box->height();
+            $request->Shipment->PackageInformation->PiecesInformation->Piece[0]->Height->DimensionUnit = $box->unitOfMeasurementSize() === Length::CM ? 'cm' : "in";
+
+            // Implement if needed
+//            $request->Shipment->PackageInformation->PiecesInformation->Piece[$boxIndex]->Options->OptionIDValuePair[0]->ID="SpecialHandling";
+//            $request->Shipment->PackageInformation->PiecesInformation->Piece[$boxIndex]->Options->OptionIDValuePair[0]->Value="true";
+//            $request->Shipment->PackageInformation->PiecesInformation->Piece[$boxIndex]->Options->OptionIDValuePair[1]->ID="SpecialHandlingType";
+//            $request->Shipment->PackageInformation->PiecesInformation->Piece[$boxIndex]->Options->OptionIDValuePair[1]->Value="LargePackage";
+
+
+            $request = (object) array_merge_recursive($customData, (array) $request);
+
+
+            // Execute the request and capture the response
+            try {
+                $response = $client->CreateShipment($request);
+
+                if (isset($response->PiecePINs->PIN->Value)) {
+                    $requestLabel = new stdClass();
+                    $requestLabel->DocumentCriterium = new stdClass();
+                    $requestLabel->DocumentCriterium->DocumentCriteria = new stdClass();
+                    $requestLabel->DocumentCriterium->DocumentCriteria->PIN = new stdClass();
+                    $requestLabel->DocumentCriterium->DocumentCriteria->PIN->Value = $response->PiecePINs->PIN->Value;
+
+                    $requestLabel->DocumentCriterium->DocumentCriteria->DocumentTypes = new stdClass();
+                    $requestLabel->DocumentCriterium->DocumentCriteria->DocumentTypes->DocumentType = "DomesticBillOfLading";
+
+                    //OutputType - Valid values are PDF, ZPL, DPL
+                    $requestLabel->OutputType = "PDF";
+
+                    //Specify Synchronous as true, if you want to consume the data object in response
+                    $requestLabel->Synchronous = false;
+                    $requestLabel->SynchronousSpecified = true;
+
+                    //Execute the request and capture the response
+                    $clientLabel = $this->createDocumentsClient();
+
+                    $responseLabel = $clientLabel->GetDocuments($requestLabel);
+
+                    if (isset($responseLabel->Documents->Document->DocumentDetails->DocumentDetail->URL)) {
+                        $clientLabelDownload = new Client();
+
+                        $responseData = $clientLabelDownload->get($responseLabel->Documents->Document->DocumentDetails->DocumentDetail->URL);
+
+                        $shippingLabelData = base64_encode($responseData->getBody()->getContents());
+
+                        $results->push(new ServiceProviderShipment($response->PiecePINs->PIN->Value, $shippingLabelData, 'PDF', (array) $response));
+                    }
+
+                }
+            } catch (Exception $e) {
+                if ($e->getMessage() === 'Unauthorized') {
+                    throw new InvalidCredentials($e->getMessage());
+                }
+
+                throw $e;
+            }
+
+        }
+
+        if (isset($response->ResponseInformation->Errors->Error)) {
+            $code = (int) (is_array($response->ResponseInformation->Errors->Error) ? $response->ResponseInformation->Errors->Error[0]->Code : $response->ResponseInformation->Errors->Error->Code) ?? 0;
+            $description = (is_array($response->ResponseInformation->Errors->Error) ? $response->ResponseInformation->Errors->Error[0]->Description : $response->ResponseInformation->Errors->Error->Description) ?? 'Invalid Request.';
+
+            throw match ($code) {
+                3001149 => new InvalidOriginPostalCode($description, $code),
+                1000000, 1100509, 1100512 => new InvalidShipmentParameters($description, $code),
+                default => new Exception($description, $code),
+            };
+        }
+
+        if ($results->isNotEmpty()) {
+            return $results;
+        }
+
+        throw new ShipmentNotCreated('Unable to create shipment.');
+    }
+
+    private function createShipmentClient(): SoapClient
+    {
+        $location = $this->credentials->test() ? 'https://devwebservices.purolator.com/EWS/V2/Shipping/ShippingService.asmx' : 'https://webservices.purolator.com/EWS/V2/Shipping/ShippingService.asmx';
+
+        $client = new SoapClient( $location . '?wsdl', [
+            'trace' => true,
+            'location' => $location,
+            'uri' => "http://purolator.com/pws/datatypes/v2",
+            'login' => $this->credentials->key(),
+            'password' => $this->credentials->password()
+        ]);
+
+        // Define the SOAP Envelope Headers
+        $headers[] = new SoapHeader('http://purolator.com/pws/datatypes/v2', 'RequestContext', [
+            'Version' => '2.0',
+            'Language' => 'en',
+            'GroupID' => 'xxx',
+            'RequestReference' => 'Rating',
+            'UserToken' => $this->credentials->userToken()
+        ]);
+
+        // Apply the SOAP Header to your client
+        $client->__setSoapHeaders($headers);
+
+        return $client;
+    }
+
+    private function createDocumentsClient(): SoapClient
+    {
+        $location = $this->credentials->test() ? 'https://devwebservices.purolator.com/PWS/V1/ShippingDocuments/ShippingDocumentsService.asmx' : 'https://webservices.purolator.com/PWS/V1/ShippingDocuments/ShippingDocumentsService.asmx';
+
+        $client = new SoapClient( $location . '?wsdl', [
+            'trace' => true,
+            'location' => $location,
+            'uri' => "http://purolator.com/pws/datatypes/v1",
+            'login' => $this->credentials->key(),
+            'password' => $this->credentials->password()
+        ]);
+
+        // Define the SOAP Envelope Headers
+        $headers[] = new SoapHeader('http://purolator.com/pws/datatypes/v1', 'RequestContext', [
+            'Version'           =>  '1.3',
+            'Language'          =>  'en',
+            'GroupID'           =>  'xxx',
+            'RequestReference'  =>  'Example Code',
+            'UserToken' => $this->credentials->userToken()
+        ]);
+
+        // Apply the SOAP Header to your client
+        $client->__setSoapHeaders($headers);
+
+        return $client;
     }
 }

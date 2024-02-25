@@ -4,16 +4,17 @@ namespace Mitrik\Tests\Feature;
 
 use Mitrik\Shipping\ServiceProviders\Address\Address;
 use Mitrik\Shipping\ServiceProviders\Box\BoxCollection;
+use Mitrik\Shipping\ServiceProviders\Box\BoxImperial;
 use Mitrik\Shipping\ServiceProviders\Box\BoxMetric;
 use Mitrik\Shipping\ServiceProviders\Exceptions\BoxOverweight;
 use Mitrik\Shipping\ServiceProviders\Exceptions\InvalidCredentials;
 use Mitrik\Shipping\ServiceProviders\Exceptions\InvalidShipmentParameters;
 use Mitrik\Shipping\ServiceProviders\Exceptions\PriceNotFound;
-use Mitrik\Shipping\ServiceProviders\Exceptions\ShipmentNotCreated;
 use Mitrik\Shipping\ServiceProviders\Phone\Phone;
+use Mitrik\Shipping\ServiceProviders\ServiceFedEx\ServiceFedEx;
+use Mitrik\Shipping\ServiceProviders\ServiceFedEx\ServiceFedExCredentials;
 use Mitrik\Shipping\ServiceProviders\ServiceProviderService\ServiceProviderService;
-use Mitrik\Shipping\ServiceProviders\ServiceUPS\ServiceUPS;
-use Mitrik\Shipping\ServiceProviders\ServiceUPS\ServiceUPSCredentials;
+use Mitrik\Shipping\ServiceProviders\ServiceProviderShipment\ServiceProviderShipmentCustomsValue;
 use Mitrik\Shipping\ServiceProviders\ShipFrom\ShipFrom;
 use Mitrik\Shipping\ServiceProviders\ShipTo\ShipTo;
 use PHPUnit\Framework\TestCase;
@@ -21,7 +22,7 @@ use PHPUnit\Framework\TestCase;
 /**
  *
  */
-class UPSRateTest extends TestCase
+class FedExTest extends TestCase
 {
     /**
      * Test domestic rate for a single box
@@ -31,12 +32,12 @@ class UPSRateTest extends TestCase
      * @throws InvalidShipmentParameters
      * @throws PriceNotFound
      */
-    public function test_ups_domestic_shipping_rate_response()
+    public function test_fedex_domestic_shipping_rate_response()
     {
-        $credentials = new ServiceUPSCredentials(env('UPS_CLIENT_ID'), env('UPS_CLIENT_SECRET'), env('UPS_USER_ID'), env('UPS_ACCOUNT_NUMBER'), env('SHIPPING_SANDBOX'));
-        $serviceUPS = new ServiceUPS($credentials);
+        $credentials = new ServiceFedExCredentials(env('FEDEX_CLIENT_ID'), env('FEDEX_CLIENT_SECRET'), env('FEDEX_ACCOUNT_NUMBER'), env('SHIPPING_SANDBOX'));
+        $fedex = new ServiceFedEx($credentials);
 
-        $rates = $serviceUPS->rate(
+        $rates = $fedex->rate(
             new Address(
                 env('TEST_SHIPPING_ORIGIN_FIRST_NAME'),
                 env('TEST_SHIPPING_ORIGIN_LAST_NAME'),
@@ -75,12 +76,12 @@ class UPSRateTest extends TestCase
      * @throws InvalidShipmentParameters
      * @throws PriceNotFound
      */
-    public function test_ups_domestic_shipping_us_rate_response()
+    public function test_fedex_domestic_shipping_us_rate_response()
     {
-        $credentials = new ServiceUPSCredentials(env('UPS_CLIENT_ID'), env('UPS_CLIENT_SECRET'), env('UPS_USER_ID'), env('UPS_ACCOUNT_NUMBER'), env('SHIPPING_SANDBOX'));
-        $serviceUPS = new ServiceUPS($credentials);
+        $credentials = new ServiceFedExCredentials(env('FEDEX_CLIENT_ID'), env('FEDEX_CLIENT_SECRET'), env('FEDEX_ACCOUNT_NUMBER'), env('SHIPPING_SANDBOX'));
+        $fedex = new ServiceFedEx($credentials);
 
-        $rates = $serviceUPS->rate(
+        $rates = $fedex->rate(
             new Address(
                 env('TEST_SHIPPING_ORIGIN_FIRST_NAME'),
                 env('TEST_SHIPPING_ORIGIN_LAST_NAME'),
@@ -121,12 +122,12 @@ class UPSRateTest extends TestCase
      * @throws InvalidShipmentParameters
      * @throws PriceNotFound
      */
-    public function test_ups_domestic_shipping_international_rate_response()
+    public function test_fedex_domestic_shipping_international_rate_response()
     {
-        $credentials = new ServiceUPSCredentials(env('UPS_CLIENT_ID'), env('UPS_CLIENT_SECRET'), env('UPS_USER_ID'), env('UPS_ACCOUNT_NUMBER'), env('SHIPPING_SANDBOX'));
-        $serviceUPS = new ServiceUPS($credentials);
+        $credentials = new ServiceFedExCredentials(env('FEDEX_CLIENT_ID'), env('FEDEX_CLIENT_SECRET'), env('FEDEX_ACCOUNT_NUMBER'), env('SHIPPING_SANDBOX'));
+        $fedex = new ServiceFedEx($credentials);
 
-        $rates = $serviceUPS->rate(
+        $rates = $fedex->rate(
             new Address(
                 env('TEST_SHIPPING_ORIGIN_FIRST_NAME'),
                 env('TEST_SHIPPING_ORIGIN_LAST_NAME'),
@@ -164,12 +165,12 @@ class UPSRateTest extends TestCase
      *
      * @return void
      */
-    public function test_ups_domestic_shipping_rates_response()
+    public function test_fedex_domestic_shipping_rates_response()
     {
-        $credentials = new ServiceUPSCredentials(env('UPS_CLIENT_ID'), env('UPS_CLIENT_SECRET'), env('UPS_USER_ID'), env('UPS_ACCOUNT_NUMBER'), env('SHIPPING_SANDBOX'));
-        $serviceUPS = new ServiceUPS($credentials);
+        $credentials = new ServiceFedExCredentials(env('FEDEX_CLIENT_ID'), env('FEDEX_CLIENT_SECRET'), env('FEDEX_ACCOUNT_NUMBER'), env('SHIPPING_SANDBOX'));
+        $fedex = new ServiceFedEx($credentials);
 
-        $rates = $serviceUPS->rates(
+        $rates = $fedex->rates(
             new Address(
                 env('TEST_SHIPPING_ORIGIN_FIRST_NAME'),
                 env('TEST_SHIPPING_ORIGIN_LAST_NAME'),
@@ -209,14 +210,14 @@ class UPSRateTest extends TestCase
      * @throws InvalidShipmentParameters
      * @throws PriceNotFound
      */
-    public function test_ups_overweight_response()
+    public function test_fedex_overweight_response()
     {
         $this->expectException(BoxOverweight::class);
 
-        $credentials = new ServiceUPSCredentials(env('UPS_CLIENT_ID'), env('UPS_CLIENT_SECRET'), env('UPS_USER_ID'), env('UPS_ACCOUNT_NUMBER'), env('SHIPPING_SANDBOX'));
-        $serviceUPS = new ServiceUPS($credentials);
+        $credentials = new ServiceFedExCredentials(env('FEDEX_CLIENT_ID'), env('FEDEX_CLIENT_SECRET'), env('FEDEX_ACCOUNT_NUMBER'), env('SHIPPING_SANDBOX'));
+        $fedex = new ServiceFedEx($credentials);
 
-        $rates = $serviceUPS->rate(
+        $rates = $fedex->rate(
             new Address(
                 env('TEST_SHIPPING_ORIGIN_FIRST_NAME'),
                 env('TEST_SHIPPING_ORIGIN_LAST_NAME'),
@@ -253,14 +254,14 @@ class UPSRateTest extends TestCase
      * @throws InvalidShipmentParameters
      * @throws PriceNotFound
      */
-    public function test_ups_invalid_credentials_response()
+    public function test_fedex_invalid_credentials_response()
     {
         $this->expectException(InvalidCredentials::class);
 
-        $credentials = new ServiceUPSCredentials('1', '2', '3', '4');
-        $serviceUPS = new ServiceUPS($credentials);
+        $credentials = new ServiceFedExCredentials('1', '2', '3');
+        $fedex = new ServiceFedEx($credentials);
 
-        $rates = $serviceUPS->rate(
+        $rates = $fedex->rate(
             new Address(
                 env('TEST_SHIPPING_ORIGIN_FIRST_NAME'),
                 env('TEST_SHIPPING_ORIGIN_LAST_NAME'),
@@ -297,14 +298,14 @@ class UPSRateTest extends TestCase
      * @throws InvalidShipmentParameters
      * @throws PriceNotFound
      */
-    public function test_ups_invalid_box_response()
+    public function test_fedex_invalid_box_response()
     {
         $this->expectException(InvalidShipmentParameters::class);
 
-        $credentials = new ServiceUPSCredentials(env('UPS_CLIENT_ID'), env('UPS_CLIENT_SECRET'), env('UPS_USER_ID'), env('UPS_ACCOUNT_NUMBER'), env('SHIPPING_SANDBOX'));
-        $serviceUPS = new ServiceUPS($credentials);
+        $credentials = new ServiceFedExCredentials(env('FEDEX_CLIENT_ID'), env('FEDEX_CLIENT_SECRET'), env('FEDEX_ACCOUNT_NUMBER'), env('SHIPPING_SANDBOX'));
+        $fedex = new ServiceFedEx($credentials);
 
-        $rates = $serviceUPS->rate(
+        $rates = $fedex->rate(
             new Address(
                 env('TEST_SHIPPING_ORIGIN_FIRST_NAME'),
                 env('TEST_SHIPPING_ORIGIN_LAST_NAME'),
@@ -339,17 +340,17 @@ class UPSRateTest extends TestCase
      * @return void
      * @throws InvalidCredentials
      * @throws InvalidShipmentParameters
-     * @throws ShipmentNotCreated
+     * @throws PriceNotFound
      */
-    public function test_ups_domestic_shipment_response()
+    public function test_fedex_domestic_shipping_shipment_response()
     {
-        $credentials = new ServiceUPSCredentials(env('UPS_CLIENT_ID'), env('UPS_CLIENT_SECRET'), env('UPS_USER_ID'), env('UPS_ACCOUNT_NUMBER'), env('SHIPPING_SANDBOX'));
-        $serviceUPS = new ServiceUPS($credentials);
+        $credentials = new ServiceFedExCredentials(env('FEDEX_CLIENT_ID'), env('FEDEX_CLIENT_SECRET'), env('FEDEX_ACCOUNT_NUMBER'), env('SHIPPING_SANDBOX'));
+        $fedex = new ServiceFedEx($credentials);
 
-        $result = $serviceUPS->ship(
+        $result = $fedex->ship(
             new ShipFrom(
                 env('TEST_SHIPPING_ORIGIN_FIRST_NAME') . ' ' . env('TEST_SHIPPING_ORIGIN_LAST_NAME'),
-                '',
+                env('TEST_SHIPPING_ORIGIN_FIRST_NAME') . ' ' . env('TEST_SHIPPING_ORIGIN_LAST_NAME'),
                 new Address(
                     env('TEST_SHIPPING_ORIGIN_FIRST_NAME'),
                     env('TEST_SHIPPING_ORIGIN_LAST_NAME'),
@@ -366,7 +367,7 @@ class UPSRateTest extends TestCase
             ),
             new ShipTo(
                 'John Smith',
-                '',
+                'John Smith',
                 new Address(
                     'Ivan',
                     'Mitrikeski',
@@ -383,7 +384,7 @@ class UPSRateTest extends TestCase
             new BoxCollection([
                 new BoxMetric(20, 10, 5, 1)
             ]),
-            new ServiceProviderService('01', '')
+            new ServiceProviderService('STANDARD_OVERNIGHT', '')
         );
 
         $this->assertArrayHasKey(0, $result);
@@ -398,14 +399,14 @@ class UPSRateTest extends TestCase
      * @return void
      * @throws InvalidCredentials
      * @throws InvalidShipmentParameters
-     * @throws ShipmentNotCreated
+     * @throws PriceNotFound
      */
-    public function test_ups_domestic_shipping_us_shipment_response()
+    public function test_fedex_domestic_shipping_us_shipment_response()
     {
-        $credentials = new ServiceUPSCredentials(env('UPS_CLIENT_ID'), env('UPS_CLIENT_SECRET'), env('UPS_USER_ID'), env('UPS_ACCOUNT_NUMBER'), env('SHIPPING_SANDBOX'));
-        $serviceUPS = new ServiceUPS($credentials);
+        $credentials = new ServiceFedExCredentials(env('FEDEX_CLIENT_ID'), env('FEDEX_CLIENT_SECRET'), env('FEDEX_ACCOUNT_NUMBER'), env('SHIPPING_SANDBOX'));
+        $fedex = new ServiceFedEx($credentials);
 
-        $result = $serviceUPS->ship(
+        $result = $fedex->ship(
             new ShipFrom(
                 env('TEST_SHIPPING_ORIGIN_FIRST_NAME') . ' ' . env('TEST_SHIPPING_ORIGIN_LAST_NAME'),
                 env('TEST_SHIPPING_ORIGIN_FIRST_NAME') . ' ' . env('TEST_SHIPPING_ORIGIN_LAST_NAME'),
@@ -440,9 +441,35 @@ class UPSRateTest extends TestCase
                 new Phone('+1', '555', '1231234')
             ),
             new BoxCollection([
-                new BoxMetric(20, 10, 5, 1)
+                new BoxImperial(20, 10, 5, 1)
             ]),
-            new ServiceProviderService('07', '')
+            new ServiceProviderService('INTERNATIONAL_ECONOMY', ''),
+            new ServiceProviderShipmentCustomsValue(300, 'USD', [
+                'dutiesPayment' => [
+                    "paymentType" => "SENDER"
+                ],
+                "isDocumentOnly" => false,
+                'commodities' => [
+                    [
+                        'description' => 'A brief description.',
+                        "countryOfManufacture" => "US",
+                        "quantity" => 1,
+                        "quantityUnits" => "PCS",
+                        "unitPrice" => [
+                            "amount" => 100.00,
+                            "currency" => "USD"
+                        ],
+                        "customsValue" => [
+                            "amount" => 300.00,
+                            "currency" => "USD"
+                        ],
+                        "weight" => [
+                            "units" => "LB",
+                            "value" => 1
+                        ]
+                    ]
+                ]
+            ])
         );
 
         $this->assertArrayHasKey(0, $result);
@@ -452,19 +479,19 @@ class UPSRateTest extends TestCase
     }
 
     /**
-     * Test International shipment for a single box
+     * Test International rate for a single box
      *
      * @return void
      * @throws InvalidCredentials
      * @throws InvalidShipmentParameters
-     * @throws ShipmentNotCreated
+     * @throws PriceNotFound
      */
-    public function test_ups_domestic_shipping_international_shipment_response()
+    public function test_fedex_domestic_shipping_international_shipment_response()
     {
-        $credentials = new ServiceUPSCredentials(env('UPS_CLIENT_ID'), env('UPS_CLIENT_SECRET'), env('UPS_USER_ID'), env('UPS_ACCOUNT_NUMBER'), env('SHIPPING_SANDBOX'));
-        $serviceUPS = new ServiceUPS($credentials);
+        $credentials = new ServiceFedExCredentials(env('FEDEX_CLIENT_ID'), env('FEDEX_CLIENT_SECRET'), env('FEDEX_ACCOUNT_NUMBER'), env('SHIPPING_SANDBOX'));
+        $fedex = new ServiceFedEx($credentials);
 
-        $result = $serviceUPS->ship(
+        $result = $fedex->ship(
             new ShipFrom(
                 env('TEST_SHIPPING_ORIGIN_FIRST_NAME') . ' ' . env('TEST_SHIPPING_ORIGIN_LAST_NAME'),
                 env('TEST_SHIPPING_ORIGIN_FIRST_NAME') . ' ' . env('TEST_SHIPPING_ORIGIN_LAST_NAME'),
@@ -501,7 +528,42 @@ class UPSRateTest extends TestCase
             new BoxCollection([
                 new BoxMetric(20, 10, 5, 1)
             ]),
-            new ServiceProviderService('07', '')
+            new ServiceProviderService('INTERNATIONAL_ECONOMY', ''),
+            new ServiceProviderShipmentCustomsValue(300, 'USD', [
+                'dutiesPayment' => [
+                    "paymentType" => "SENDER"
+                ],
+                "isDocumentOnly" => false,
+                'commodities' => [
+                    [
+                        'description' => 'A brief description.',
+                        "countryOfManufacture" => "US",
+                        "quantity" => 1,
+                        "quantityUnits" => "PCS",
+                        "unitPrice" => [
+                            "amount" => 100.00,
+                            "currency" => "USD"
+                        ],
+                        "customsValue" => [
+                            "amount" => 300.00,
+                            "currency" => "USD"
+                        ],
+                        "weight" => [
+                            "units" => "KG",
+                            "value" => 1
+                        ],
+                    ]
+                ],
+                "exportDetail" => [
+                    "destinationControlDetail" => [
+                        "endUser" => "dest country user",
+                        "statementTypes" => "DEPARTMENT_OF_COMMERCE",
+                        "destinationCountries" => ["USA", "Germany"],
+                    ],
+                    "b13AFilingOption" => "NOT_REQUIRED",
+                    "permitNumber" => "12345",
+                ],
+            ])
         );
 
         $this->assertArrayHasKey(0, $result);
@@ -510,21 +572,17 @@ class UPSRateTest extends TestCase
         $this->assertNotEmpty($result[0]->shipmentLabelDataFormat());
     }
 
-
     /**
      * Test domestic rate for multiple boxes
      *
      * @return void
-     * @throws InvalidCredentials
-     * @throws InvalidShipmentParameters
-     * @throws ShipmentNotCreated
      */
-    public function test_ups_domestic_shipping_shipments_response()
+    public function test_fedex_domestic_shipping_shipments_response()
     {
-        $credentials = new ServiceUPSCredentials(env('UPS_CLIENT_ID'), env('UPS_CLIENT_SECRET'), env('UPS_USER_ID'), env('UPS_ACCOUNT_NUMBER'), env('SHIPPING_SANDBOX'));
-        $serviceUPS = new ServiceUPS($credentials);
+        $credentials = new ServiceFedExCredentials(env('FEDEX_CLIENT_ID'), env('FEDEX_CLIENT_SECRET'), env('FEDEX_ACCOUNT_NUMBER'), env('SHIPPING_SANDBOX'));
+        $fedex = new ServiceFedEx($credentials);
 
-        $result = $serviceUPS->ship(
+        $result = $fedex->ship(
             new ShipFrom(
                 env('TEST_SHIPPING_ORIGIN_FIRST_NAME') . ' ' . env('TEST_SHIPPING_ORIGIN_LAST_NAME'),
                 env('TEST_SHIPPING_ORIGIN_FIRST_NAME') . ' ' . env('TEST_SHIPPING_ORIGIN_LAST_NAME'),
@@ -562,7 +620,7 @@ class UPSRateTest extends TestCase
                 new BoxMetric(20, 10, 5, 1),
                 new BoxMetric(20, 10, 5, 1),
             ]),
-            new ServiceProviderService('01', '')
+            new ServiceProviderService('FEDEX_GROUND', ''),
         );
 
         $this->assertArrayHasKey(0, $result);
@@ -574,5 +632,4 @@ class UPSRateTest extends TestCase
         $this->assertNotEmpty($result[1]->shipmentLabelData());
         $this->assertNotEmpty($result[1]->shipmentLabelDataFormat());
     }
-
 }

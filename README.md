@@ -2,13 +2,21 @@
 Supported shipping providers:
 - UPS REST/OAuth API
 - FedEx REST/OAuth API
-- CanadaPost
+- Canada Post
 - USPS
 - Purolator
 
-Package can be used outside of Laravel environment as well (by making individual shipping provider requests).
+Package can be used outside the Laravel environment as well (by making individual shipping provider requests).
 
-Currently, there is only support for rating services.
+Supported API services:
+
+| Shipping Provider | Rate API | Shipment API |
+|:------------------|:--------:|:------------:|
+| UPS REST          |    ✓     |      ✓       |
+| FedEx REST        |    ✓     |      ✓       |
+| Canada Post       |    ✓     |      ✓       |
+| Purolator         |    ✓     |      ✓       |
+| USPS              |    ✓     |      -       |
 
 ### Install package
 ```bash
@@ -343,7 +351,6 @@ $rates = $flat->rate(
         new BoxMetric(35, 26, 5, 1)
     ])
 );
-
 ```
 
 #### Creating shipping boxes
@@ -385,6 +392,231 @@ $modelShippingOptionPrice->shipping_service_id = $modelShippingOption->shipping_
 $modelShippingOptionPrice->price = 10.99;
 $modelShippingOptionPrice->save();
 ```
+
+
+### Creating Shipments
+
+##### Canada Post
+
+```php
+use Mitrik\Shipping\ServiceProviders\Address\Address;
+use Mitrik\Shipping\ServiceProviders\Box\BoxCollection;
+use Mitrik\Shipping\ServiceProviders\Box\BoxMetric;
+use Mitrik\Shipping\ServiceProviders\ServiceCanadaPost\ServiceCanadaPost;
+use Mitrik\Shipping\ServiceProviders\ServiceCanadaPost\ServiceCanadaPostCredentials;
+
+$credentials = new ServiceCanadaPostCredentials(env('CANADA_POST_CUSTOMER_NUMBER'), env('CANADA_POST_USERNAME'), env('CANADA_POST_PASSWORD'));
+$canadaPost = new ServiceCanadaPost($credentials);
+
+$result = $canadaPost->ship(
+    new ShipFrom(
+        name: 'Ivan Mitrikeski',
+        attentionName: 'Ivan Mitrikeski',
+        address: new Address(
+            'Ivan',
+            'Mitrikeski',
+            '',
+            '321 Lakeshore Rd W',
+            '',
+            'Mississauga',
+            'L5H 1G0',
+            'ON',
+            'CA'
+        ),
+        phone: new Phone('+1', '555', '1231234'),
+        company: 'Test'
+    ),
+    new ShipTo(
+        'John Smith',
+        'John Smith',
+        new Address(
+            'John',
+            'Smith',
+            '',
+            '100 City Centre Dr',
+            '',
+            'Mississauga',
+            'L5B 2C9',
+            'ON',
+            'CA'
+        ),
+        new Phone('+1', '555', '1231234')
+    ),
+    new BoxCollection([
+        new BoxMetric(20, 10, 5, 1)
+    ]),
+    new ServiceProviderService('DOM.RP', ''),
+    null,
+    [
+        'delivery-spec' => [
+            'settlement-info' => [
+                'contract-id' => '0042708517'
+            ]
+        ]
+    ]
+);
+```
+
+#### Purolator
+
+```php
+use Mitrik\Shipping\ServiceProviders\Address\Address;
+use Mitrik\Shipping\ServiceProviders\Box\BoxCollection;
+use Mitrik\Shipping\ServiceProviders\Box\BoxMetric;
+use Mitrik\Shipping\ServiceProviders\ServicePurolator\ServicePurolator;
+use Mitrik\Shipping\ServiceProviders\ServicePurolator\ServicePurolatorCredentials;
+
+$credentials = new ServicePurolatorCredentials(env('PUROLATOR_KEY'), env('PUROLATOR_PASSWORD'), env('PUROLATOR_BILLING_ACCOUNT'), env('PUROLATOR_REGISTERED_ACCOUNT'), env('PUROLATOR_USER_TOKEN'), env('PUROLATOR_SANDBOX'));
+$purolator = new ServicePurolator($credentials);
+
+$result = $purolator->ship(
+    new ShipFrom(
+        'Ivan Mitrikeski',
+        'Ivan Mitrikeski',
+        new Address(
+            'Ivan',
+            'Mitrikeski',
+            '',
+            '321 Lakeshore Rd W',
+            '',
+            'Mississauga',
+            'L5H 1G0',
+            'ON',
+            'CA'
+        ),
+        new Phone('+1', '555', '1231234'),
+        ''
+    ),
+    new ShipTo(
+        'John Smith',
+        'John Smith',
+        new Address(
+            'John',
+            'Smith',
+            '',
+            '100 City Centre Dr',
+            '',
+            'Mississauga',
+            'L5B 2C9',
+            'ON',
+            'CA'
+        ),
+        new Phone('+1', '555', '1231234')
+    ),
+    new BoxCollection([
+        new BoxMetric(20, 10, 5, 1)
+    ]),
+    new ServiceProviderService('PurolatorExpress', '')
+);
+```
+
+#### UPS
+
+```php
+use Mitrik\Shipping\ServiceProviders\Address\Address;
+use Mitrik\Shipping\ServiceProviders\Box\BoxCollection;
+use Mitrik\Shipping\ServiceProviders\Box\BoxMetric;
+use Mitrik\Shipping\ServiceProviders\ServiceUPS\ServiceUPS;
+use Mitrik\Shipping\ServiceProviders\ServiceUPS\ServiceUPSCredentials;
+
+$credentials = new ServiceUPSCredentials(env('UPS_ACCESS_KEY'), env('UPS_USER_ID'), env('UPS_PASSWORD'));
+$serviceUPS = new ServiceUPS($credentials);
+
+$result = $serviceUPS->ship(
+    new ShipFrom(
+        'Ivan Mitrikeski',
+        'Ivan Mitrikeski',
+        new Address(
+            'Ivan',
+            'Mitrikeski',
+            '',
+            '1 Wall St',
+            '',
+            'New York',
+            '10005',
+            'NY',
+            'US'
+        ),
+        new Phone('+1', '555', '1231234'),
+        ''
+    ),
+    new ShipTo(
+        'John Smith',
+        'John Smith',
+        new Address(
+            'John',
+            'Smith',
+            '',
+            '1 Wall St',
+            '',
+            'New York',
+            '10005',
+            'NY',
+            'US'
+        ),
+        new Phone('+1', '555', '1231234')
+    ),
+    new BoxCollection([
+        new BoxImperial(20, 10, 5, 1)
+    ]),
+    new ServiceProviderService('03', '')
+);
+```
+
+
+#### FedEx
+
+```php
+use Mitrik\Shipping\ServiceProviders\Address\Address;
+use Mitrik\Shipping\ServiceProviders\Box\BoxCollection;
+use Mitrik\Shipping\ServiceProviders\Box\BoxMetric;
+use Mitrik\Shipping\ServiceProviders\ServiceFedEx\ServiceFedEx;
+use Mitrik\Shipping\ServiceProviders\ServiceFedEx\ServiceFedExCredentials;
+
+$credentials = new ServiceFedExCredentials(env('FEDEX_CLIENT_ID'), env('FEDEX_CLIENT_SECRET'), env('FEDEX_ACCOUNT_NUMBER'));
+$fedEx = new ServiceFedEx($credentials);
+
+$result = $fedEx->ship(
+    new ShipFrom(
+        'Ivan Mitrikeski',
+        'Ivan Mitrikeski',
+        new Address(
+            'Ivan',
+            'Mitrikeski',
+            '',
+            '1 Wall St',
+            '',
+            'New York',
+            '10005',
+            'NY',
+            'US'
+        ),
+        new Phone('+1', '555', '1231234'),
+        ''
+    ),
+    new ShipTo(
+        'John Smith',
+        'John Smith',
+        new Address(
+            'John',
+            'Smith',
+            '',
+            '1 Wall St',
+            '',
+            'New York',
+            '10005',
+            'NY',
+            'US'
+        ),
+        new Phone('+1', '555', '1231234')
+    ),
+    new BoxCollection([
+        new BoxImperial(20, 10, 5, 1)
+    ]),
+    new ServiceProviderService('FEDEX_2_DAY', '')
+);
+```
+
 
 # Testing
 

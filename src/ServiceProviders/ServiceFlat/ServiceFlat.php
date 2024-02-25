@@ -15,6 +15,9 @@ use Mitrik\Shipping\ServiceProviders\ServiceProvider;
 use Mitrik\Shipping\ServiceProviders\ServiceProviderRate\ServiceProviderRate;
 use Mitrik\Shipping\ServiceProviders\ServiceProviderRate\ServiceProviderRateCollection;
 use Mitrik\Shipping\ServiceProviders\ServiceProviderService\ServiceProviderService;
+use Mitrik\Shipping\ServiceProviders\ServiceProviderShipment\ServiceProviderShipmentCollection;
+use Mitrik\Shipping\ServiceProviders\ShipFrom\ShipFrom;
+use Mitrik\Shipping\ServiceProviders\ShipTo\ShipTo;
 
 class ServiceFlat extends ServiceProvider
 {
@@ -145,4 +148,10 @@ class ServiceFlat extends ServiceProvider
 
         return $results;
     }
+
+    public function ship(ShipFrom $shipFrom, ShipTo $shipTo, BoxCollection $boxes, ServiceProviderService $serviceProviderService): ServiceProviderShipmentCollection
+    {
+        throw new \Exception('Not implemented yet.');
+    }
+
 }

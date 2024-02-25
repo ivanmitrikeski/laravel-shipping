@@ -19,6 +19,10 @@ use Mitrik\Shipping\ServiceProviders\ServiceProvider;
 use Mitrik\Shipping\ServiceProviders\ServiceProviderRate\ServiceProviderRate;
 use Mitrik\Shipping\ServiceProviders\ServiceProviderRate\ServiceProviderRateCollection;
 use Mitrik\Shipping\ServiceProviders\ServiceProviderService\ServiceProviderService;
+use Mitrik\Shipping\ServiceProviders\ServiceProviderShipment\ServiceProviderShipmentCollection;
+use Mitrik\Shipping\ServiceProviders\ServiceProviderShipment\ServiceProviderShipmentCustomsValue;
+use Mitrik\Shipping\ServiceProviders\ShipFrom\ShipFrom;
+use Mitrik\Shipping\ServiceProviders\ShipTo\ShipTo;
 
 class ServiceUSPS extends ServiceProvider
 {
@@ -562,5 +566,10 @@ class ServiceUSPS extends ServiceProvider
         ];
 
         return $counties[$countryCode] ?? throw new InvalidAddress('Invalid country code.');
+    }
+
+    public function ship(ShipFrom $shipFrom, ShipTo $shipTo, BoxCollection $boxes, ServiceProviderService $serviceProviderService, ServiceProviderShipmentCustomsValue|null $serviceProviderShipmentCustomsValue = null, $customData = []): ServiceProviderShipmentCollection
+    {
+        throw new \Exception('Not implemented yet.');
     }
 }

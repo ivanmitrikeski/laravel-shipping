@@ -7,8 +7,15 @@ use Mitrik\Shipping\ServiceProviders\Box\BoxCollection;
 use Mitrik\Shipping\ServiceProviders\Box\BoxInterface;
 use Mitrik\Shipping\ServiceProviders\Exceptions\BoxEmpty;
 use Mitrik\Shipping\ServiceProviders\Exceptions\BoxOverweight;
+use Mitrik\Shipping\ServiceProviders\Exceptions\CustomsDeclarationMissing;
 use Mitrik\Shipping\ServiceProviders\ServiceProviderRate\ServiceProviderRateCollection;
 use Mitrik\Shipping\ServiceProviders\ServiceProviderService\ServiceProviderService;
+use Mitrik\Shipping\ServiceProviders\ServiceProviderShipment\ServiceProviderShipment;
+use Mitrik\Shipping\ServiceProviders\ServiceProviderShipment\ServiceProviderShipmentCollection;
+use Mitrik\Shipping\ServiceProviders\ServiceProviderShipment\ServiceProviderShipmentCustomsValue;
+use Mitrik\Shipping\ServiceProviders\ServiceProviderShipment\ShippingProviderShipment;
+use Mitrik\Shipping\ServiceProviders\ShipFrom\ShipFrom;
+use Mitrik\Shipping\ServiceProviders\ShipTo\ShipTo;
 
 /**
  *
@@ -42,6 +49,8 @@ abstract class ServiceProvider
      */
     abstract function rate(Address $addressFrom, Address $addressTo, BoxCollection $boxes, ServiceProviderService|null $serviceProviderService = null): ServiceProviderRateCollection;
 
+    abstract function ship(ShipFrom $shipFrom, ShipTo $shipTo, BoxCollection $boxes, ServiceProviderService $serviceProviderService, ServiceProviderShipmentCustomsValue|null $serviceProviderShipmentCustomsValue = null, $customData = []): ServiceProviderShipmentCollection;
+
     /**
      * @param Box\BoxCollection $boxes
      * @return void
@@ -66,6 +75,13 @@ abstract class ServiceProvider
             if ($box->isOverweight()) {
                 throw new BoxOverweight("Maximum weight for box " . $box . " is " . $box->maxWeight());
             }
+        }
+    }
+
+    public function checkCustomsDeclaration(ShipFrom $shipFrom, ShipTo $shipTo, ServiceProviderShipmentCustomsValue|null $serviceProviderShipmentCustomsValue)
+    {
+        if ($shipFrom->address()->countryCodeIso2() !== $shipTo->address()->countryCodeIso2() && $serviceProviderShipmentCustomsValue === null) {
+            throw new CustomsDeclarationMissing('Missing customs declaration.');
         }
     }
 }

@@ -11,15 +11,23 @@ use Mitrik\Shipping\ServiceProviders\Box\Box;
 use Mitrik\Shipping\ServiceProviders\Box\BoxCollection;
 use Mitrik\Shipping\ServiceProviders\Exceptions\BoxEmpty;
 use Mitrik\Shipping\ServiceProviders\Exceptions\BoxOverweight;
+use Mitrik\Shipping\ServiceProviders\Exceptions\CustomsDeclarationMissing;
 use Mitrik\Shipping\ServiceProviders\Exceptions\InvalidCredentials;
+use Mitrik\Shipping\ServiceProviders\Exceptions\InvalidService;
 use Mitrik\Shipping\ServiceProviders\Exceptions\InvalidShipmentParameters;
 use Mitrik\Shipping\ServiceProviders\Exceptions\PriceNotFound;
+use Mitrik\Shipping\ServiceProviders\Exceptions\ShipmentNotCreated;
 use Mitrik\Shipping\ServiceProviders\Measurement\Length;
 use Mitrik\Shipping\ServiceProviders\Measurement\Weight;
 use Mitrik\Shipping\ServiceProviders\ServiceProvider;
 use Mitrik\Shipping\ServiceProviders\ServiceProviderRate\ServiceProviderRate;
 use Mitrik\Shipping\ServiceProviders\ServiceProviderRate\ServiceProviderRateCollection;
 use Mitrik\Shipping\ServiceProviders\ServiceProviderService\ServiceProviderService;
+use Mitrik\Shipping\ServiceProviders\ServiceProviderShipment\ServiceProviderShipment;
+use Mitrik\Shipping\ServiceProviders\ServiceProviderShipment\ServiceProviderShipmentCollection;
+use Mitrik\Shipping\ServiceProviders\ServiceProviderShipment\ServiceProviderShipmentCustomsValue;
+use Mitrik\Shipping\ServiceProviders\ShipFrom\ShipFrom;
+use Mitrik\Shipping\ServiceProviders\ShipTo\ShipTo;
 
 class ServiceFedEx extends ServiceProvider
 {
@@ -279,9 +287,16 @@ class ServiceFedEx extends ServiceProvider
                 ],
             ]);
         } catch (RequestException $e) {
-            throw match ($e->getCode()) {
+            $code = $e->getCode();
+            $jsonError = json_decode($e->getResponse()->getBody(), true);
+
+            $code = $jsonError['errors'][0]['code'] ?? $code;
+            $message = $jsonError['errors'][0]['message'] ?? $code ?? 'Invalid Shipment Parameters';
+
+            throw match ($code) {
                 401 => new InvalidCredentials('Invalid ' . self::NAME . ' credentials'),
-                default => $e,
+                'FORBIDDEN.ERROR' => throw new InvalidCredentials($message),
+                default => new InvalidShipmentParameters($message),
             };
         } catch (Exception $e) {
             throw $e;
@@ -300,4 +315,164 @@ class ServiceFedEx extends ServiceProvider
 
         return $accessToken;
     }
+
+    public function ship(ShipFrom $shipFrom, ShipTo $shipTo, BoxCollection $boxes, ServiceProviderService $serviceProviderService, ServiceProviderShipmentCustomsValue|null $serviceProviderShipmentCustomsValue = null, $customData = []): ServiceProviderShipmentCollection
+    {
+        $this->checkForEmptyBoxes($boxes);
+        $this->checkForOverweightBoxes($boxes);
+        $this->checkCustomsDeclaration($shipFrom, $shipTo, $serviceProviderShipmentCustomsValue);
+
+        $request = [
+            "labelResponseOptions" => "LABEL",
+            "requestedShipment" => [
+                "shipper" => [
+                    "contact" => [
+                        "personName" => $shipFrom->name(),
+                        "phoneNumber" => $shipFrom->phone(),
+                        "phoneExtension" => $shipFrom->phone()->extension(),
+                        "emailAddress" => $shipFrom->email(),
+                        "company" => $shipFrom->company(),
+                    ],
+                    "address" => [
+                        "streetLines" => [
+                            $shipFrom->address()->line1(),
+                            $shipFrom->address()->line2(),
+                        ],
+                        "city" => $shipFrom->address()->city(),
+                        "stateOrProvinceCode" => $shipFrom->address()->stateCodeIso2(),
+                        "postalCode" => $shipFrom->address()->postalCode(),
+                        "countryCode" => $shipFrom->address()->countryCodeIso2(),
+                    ],
+                ],
+                "recipients" => [
+                    [
+                        "contact" => [
+                            "personName" => $shipTo->name(),
+                            "phoneNumber" => $shipTo->phone(),
+                            "emailAddress" => $shipFrom->email(),
+                            "company" => $shipFrom->company(),
+                        ],
+                        "address" => [
+                            "streetLines" => [
+                                $shipTo->address()->line1(),
+                                $shipTo->address()->line2(),
+                            ],
+                            "city" => $shipTo->address()->city(),
+                            "stateOrProvinceCode" => $shipTo->address()->stateCodeIso2(),
+                            "postalCode" => $shipTo->address()->postalCode(),
+                            "countryCode" => $shipTo->address()->countryCodeIso2(),
+                        ],
+                    ],
+                ],
+                "shipDatestamp" => $shipFrom->shipDate()->format('Y-m-d'),
+                "pickupType" => "USE_SCHEDULED_PICKUP",
+                "serviceType" => $serviceProviderService->serviceCode(),
+                "packagingType" => "YOUR_PACKAGING",
+                "blockInsightVisibility" => false,
+                "shippingChargesPayment" => [
+                    "paymentType" => "SENDER"
+                ],
+                "labelSpecification" => [
+                    "imageType" => "PNG",
+                    "labelStockType" => "PAPER_4X6",
+                ],
+                "requestedPackageLineItems" => [[]],
+            ],
+            "accountNumber" => [
+                "value" => $this->credentials->accountNumber()
+            ],
+        ];
+
+        if ($serviceProviderShipmentCustomsValue !== null) {
+            $request['requestedShipment']['customsClearanceDetail']['totalCustomsValue'] = [
+                'amount' => $serviceProviderShipmentCustomsValue->amount(),
+                'currency' => $serviceProviderShipmentCustomsValue->currency(),
+            ];
+
+            $request['requestedShipment']['customsClearanceDetail'] = $serviceProviderShipmentCustomsValue->customData() + $request['requestedShipment']['customsClearanceDetail'];
+        }
+
+        $request['requestedShipment']['requestedPackageLineItems'] = [];
+
+        /** @var Box $box */
+        foreach ($boxes as $box) {
+            $request['requestedShipment']['requestedPackageLineItems'][] = [
+                "weight" => [
+                    "units" => $box->unitOfMeasurementWeight() == Weight::KG ? 'KG' : 'LB',
+                    "value" => $box->weight()
+                ],
+                "dimensions" => [
+                    "length" => (int) round($box->length()),
+                    "width" => (int) round($box->width()),
+                    "height" => (int) round($box->height()),
+                    "units" => $box->unitOfMeasurementSize() == Length::CM ? 'CM' : 'IN'
+                ],
+            ];
+
+        }
+
+        $request = array_merge_recursive($customData, $request);
+
+        $client = new Client();
+
+        $url = $this->credentials->test() ? 'https://apis-sandbox.fedex.com/ship/v1/shipments' : 'https://apis.fedex.com/ship/v1/shipments';
+
+        $results = new ServiceProviderShipmentCollection();
+
+        try {
+            $response = $client->post($url, [
+                'headers' => [
+                    'Authorization' => 'Bearer ' . $this->token(),
+                    'Content-Type' => 'application/json',
+                ],
+                'body' => json_encode($request),
+            ]);
+
+
+
+            $responseJson = json_decode($response->getBody()->getContents(), true);
+
+            $success = isset($responseJson['transactionId'], $responseJson['output']);
+
+            if ($success) {
+                foreach ($responseJson['output']['transactionShipments'][0]['pieceResponses'] as $pieceResponse) {
+                    foreach ($pieceResponse['packageDocuments'] as $packageDocument) {
+                        if ($packageDocument['contentType'] !== 'LABEL') {
+                            continue;
+                        }
+
+                        $trackingNumber = $pieceResponse['trackingNumber'];
+                        $shippingLabelFormat = $packageDocument['docType'];
+                        $shippingLabelData = $packageDocument['encodedLabel'];
+
+                        $results->push(new ServiceProviderShipment($trackingNumber, $shippingLabelData, $shippingLabelFormat, $pieceResponse));
+                    }
+                }
+            }
+        } catch (RequestException $e) {
+            $code = $e->getCode();
+
+            $jsonError = json_decode($e->getResponse()->getBody(), true);
+
+            $code = $jsonError['errors'][0]['code'] ?? $code;
+            $message = $jsonError['errors'][0]['message'] ?? $code ?? 'Invalid Shipment Parameters';
+
+            throw match ($code) {
+                401 => new InvalidCredentials('Invalid ' . self::NAME . ' credentials'),
+                'SERVICE.PACKAGECOMBINATION.INVALID', 'INVALID.INPUT.EXCEPTION', 'REQUESTEDPACKAGELINEITEMS.WEIGHTSUNITS.INVALID' => new InvalidShipmentParameters($message ?? 'Invalid Shipment Parameters'),
+                'SELECTED.DESTINATION.SERVICETYPE.INVALID' => new InvalidService($message ?? 'Invalid service selected between locations.'),
+                default => $e,
+            };
+        } catch (Exception $e) {
+            throw $e;
+        }
+
+        if ($results->isNotEmpty()) {
+            return $results;
+        }
+
+        throw new ShipmentNotCreated('Unable to create shipment.');
+    }
+
+
 }

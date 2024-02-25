@@ -12,12 +12,18 @@ use Mitrik\Shipping\ServiceProviders\Exceptions\BoxOverweight;
 use Mitrik\Shipping\ServiceProviders\Exceptions\InvalidCredentials;
 use Mitrik\Shipping\ServiceProviders\Exceptions\InvalidShipmentParameters;
 use Mitrik\Shipping\ServiceProviders\Exceptions\PriceNotFound;
+use Mitrik\Shipping\ServiceProviders\Exceptions\ShipmentNotCreated;
 use Mitrik\Shipping\ServiceProviders\Measurement\Length;
 use Mitrik\Shipping\ServiceProviders\Measurement\Weight;
 use Mitrik\Shipping\ServiceProviders\ServiceProvider;
 use Mitrik\Shipping\ServiceProviders\ServiceProviderRate\ServiceProviderRate;
 use Mitrik\Shipping\ServiceProviders\ServiceProviderRate\ServiceProviderRateCollection;
 use Mitrik\Shipping\ServiceProviders\ServiceProviderService\ServiceProviderService;
+use Mitrik\Shipping\ServiceProviders\ServiceProviderShipment\ServiceProviderShipment;
+use Mitrik\Shipping\ServiceProviders\ServiceProviderShipment\ServiceProviderShipmentCollection;
+use Mitrik\Shipping\ServiceProviders\ServiceProviderShipment\ServiceProviderShipmentCustomsValue;
+use Mitrik\Shipping\ServiceProviders\ShipFrom\ShipFrom;
+use Mitrik\Shipping\ServiceProviders\ShipTo\ShipTo;
 
 class ServiceUPS extends ServiceProvider
 {
@@ -344,9 +350,15 @@ class ServiceUPS extends ServiceProvider
                 'body' => 'grant_type=client_credentials',
             ]);
         } catch (RequestException $e) {
+            $code = $e->getCode();
+            $jsonError = json_decode($e->getResponse()->getBody(), true);
+
+            $code = (int) $jsonError['response']['errors'][0]['code'] ?? $code;
+            $message = $jsonError['response']['errors'][0]['message'] ?? $code ?? 'Invalid Shipment Parameters';
+
             throw match ($e->getCode()) {
                 401 => new InvalidCredentials('Invalid ' . self::NAME . ' credentials'),
-                default => $e,
+                default => new InvalidShipmentParameters($message),
             };
         } catch (\Exception $e) {
             throw $e;
@@ -365,4 +377,191 @@ class ServiceUPS extends ServiceProvider
 
         return $accessToken;
     }
+
+    public function ship(ShipFrom $shipFrom, ShipTo $shipTo, BoxCollection $boxes, ServiceProviderService $serviceProviderService, ServiceProviderShipmentCustomsValue|null $serviceProviderShipmentCustomsValue = null, $customData = []): ServiceProviderShipmentCollection
+    {
+        $this->checkForEmptyBoxes($boxes);
+        $this->checkForOverweightBoxes($boxes);
+
+        $request = [
+            "ShipmentRequest" => [
+                "Request" => [
+                    "SubVersion" => "1801",
+                    "RequestOption" => "nonvalidate",
+                    "TransactionReference" => [
+                        "CustomerContext" => ""
+                    ]
+                ],
+                "Shipment" => [
+                    "Description" => "Shipment to " . $shipTo->attentionName(),
+                    "Shipper" => [
+                        "Name" => ($shipFrom->address()->companyName() != '') ? $shipFrom->address()->companyName() : $shipFrom->address()->fullName(),
+                        "AttentionName" => $shipTo->attentionName(),
+                        "CompanyDisplayableName" => $shipFrom->company(),
+                        "ShipperNumber" => $this->credentials->accountNumber(),
+                        "Phone" => [
+                            "Number" => $shipFrom->phone()->e164(),
+                            "Extension" => $shipFrom->phone()->extension()
+                        ],
+                        "Address" => [
+                            "AddressLine" => [
+                                $shipFrom->address()->line1(),
+                                $shipFrom->address()->line2(),
+                            ],
+                            "City" => $shipFrom->address()->city(),
+                            "StateProvinceCode" => $shipFrom->address()->stateCodeIso2(),
+                            "PostalCode" => $shipFrom->address()->postalCode(),
+                            "CountryCode" => $shipFrom->address()->countryCodeIso2()
+                        ]
+                    ],
+                    "ShipTo" => [
+                        "Name" => ($shipTo->address()->companyName() != '') ? $shipTo->address()->companyName() : $shipTo->address()->fullName(),
+                        "AttentionName" => $shipTo->attentionName(),
+                        "CompanyDisplayableName" => $shipTo->company(),
+                        "Phone" => [
+                            "Number" => $shipTo->phone()->e164(),
+                        ],
+                        "Address" => [
+                            "AddressLine" => [
+                                $shipTo->address()->line1(),
+                                $shipTo->address()->line2(),
+                            ],
+                            "City" => $shipTo->address()->city(),
+                            "StateProvinceCode" => $shipTo->address()->stateCodeIso2(),
+                            "PostalCode" => $shipTo->address()->postalCode(),
+                            "CountryCode" => $shipTo->address()->countryCodeIso2()
+                        ]
+                    ],
+                    "ShipFrom" => [
+                        "Name" => ($shipFrom->address()->companyName() != '') ? $shipFrom->address()->companyName() : $shipFrom->address()->fullName(),
+                        "Address" => [
+                            "AddressLine" => [
+                                $shipFrom->address()->line1(),
+                                $shipFrom->address()->line2(),
+                            ],
+                            "City" => $shipFrom->address()->city(),
+                            "StateProvinceCode" => $shipFrom->address()->stateCodeIso2(),
+                            "PostalCode" => $shipFrom->address()->postalCode(),
+                            "CountryCode" => $shipFrom->address()->countryCodeIso2()
+                        ]
+                    ],
+                    "PaymentInformation" => [
+                        "ShipmentCharge" => [
+                            "Type" => "01",
+                            "BillShipper" => [
+                                "AccountNumber" => $this->credentials->accountNumber()
+                            ]
+                        ]
+                    ],
+                    "Service" => [
+                        "Code" => $serviceProviderService->serviceCode(),
+                        "Description" => $serviceProviderService->serviceName()
+                    ],
+                    "Package" => [
+//                        "SimpleRate" => [
+//                            "Description" => "SimpleRateDescription",
+//                            "Code" => "XS"
+//                        ],
+                        "Packaging" => [
+                            "Code" => "02",
+                            "Description" => "Packaging"
+                        ],
+                    ]
+                ],
+                "LabelSpecification" => [
+                    "LabelImageFormat" => [
+                        "Code" => "GIF",
+                        "Description" => "GIF"
+                    ],
+                    "HTTPUserAgent" => "Mozilla/4.5"
+                ]
+            ]
+        ];
+
+        $results = new ServiceProviderShipmentCollection();
+
+        /** @var Box $box */
+        foreach ($boxes as $box) {
+            $requestItem = $request;
+//                $requestItem['ShipmentRequest']['Shipment']['Service']['Code'] = (string) $serviceProviderServiceItem->serviceCode();
+//                $requestItem['ShipmentRequest']['Shipment']['Service']['Description'] = $serviceProviderServiceItem->serviceName();
+
+            $requestItem['ShipmentRequest']['Shipment']['Package']['Dimensions']['UnitOfMeasurement']['Code'] = $box->unitOfMeasurementSize() == Length::CM ? 'CM' : 'IN';
+            $requestItem['ShipmentRequest']['Shipment']['Package']['Dimensions']['UnitOfMeasurement']['Description'] = $box->unitOfMeasurementSize() == Length::CM ? 'Centimeters' : 'Inches';
+            $requestItem['ShipmentRequest']['Shipment']['Package']['Dimensions']['Length'] = (string) $box->length();
+            $requestItem['ShipmentRequest']['Shipment']['Package']['Dimensions']['Width'] = (string) $box->width();
+            $requestItem['ShipmentRequest']['Shipment']['Package']['Dimensions']['Height'] = (string) $box->height();
+
+            $requestItem['ShipmentRequest']['Shipment']['Package']['PackageWeight']['UnitOfMeasurement']['Code'] = $box->unitOfMeasurementWeight() == Weight::KG ? 'KGS' : 'LBS';
+            $requestItem['ShipmentRequest']['Shipment']['Package']['PackageWeight']['UnitOfMeasurement']['Description'] = $box->unitOfMeasurementWeight() == Weight::KG ? 'Kilograms' : 'Pounds';
+            $requestItem['ShipmentRequest']['Shipment']['Package']['PackageWeight']['Weight'] = (string) $box->weight();
+
+            $requestItem = array_merge_recursive($customData, $requestItem);
+
+            $client = new \GuzzleHttp\Client();
+
+            try {
+                $response = $client->post('https://wwwcie.ups.com/api/shipments/v1/ship?additionaladdressvalidation=string', [
+                    'headers' => [
+                        'Authorization' => 'Bearer ' . $this->token(),
+                        'Content-Type' => 'application/x-www-form-urlencoded',
+                        'x-merchant-id' => $this->credentials->userId(),
+                        'transId' => md5(microtime(true)),
+                        'transactionSrc' => 'testing',
+                    ],
+                    'body' => json_encode($requestItem),
+                ]);
+
+                $responseJson = json_decode($response->getBody()->getContents(), true);
+
+                $success = $responseJson['ShipmentResponse']['Response']['ResponseStatus']['Code'] == 1;
+                $trackingNumber = $responseJson['ShipmentResponse']['ShipmentResults']['PackageResults']['TrackingNumber'];
+                $shippingLabelFormat = $responseJson['ShipmentResponse']['ShipmentResults']['PackageResults']['ShippingLabel']['ImageFormat']['Code'];
+                $shippingLabelData = $responseJson['ShipmentResponse']['ShipmentResults']['PackageResults']['ShippingLabel']['GraphicImage'];
+
+                if ($success) {
+                    $results->push(new ServiceProviderShipment($trackingNumber, $shippingLabelData, $shippingLabelFormat, $responseJson));
+                }
+            } catch (RequestException $e) {
+                $code = $e->getCode();
+
+                $jsonError = json_decode($e->getResponse()->getBody(), true);
+
+                $code = (int) $jsonError['response']['errors'][0]['code'] ?? $code;
+                $message = $jsonError['response']['errors'][0]['message'] ?? $code ?? 'Invalid Shipment Parameters';
+
+                // The requested service is unavailable between the selected locations
+                if ($code === 111210 || $code === 111217) {
+                    continue;
+                }
+
+                // The requested service is invalid from the selected origin
+                if ($code === 111100) {
+                    continue;
+                }
+
+                // Shipper's UPS Account is not enabled for the requested UPS SurePost service
+                // TODO: Throw runtime error
+                if ($code === 112077) {
+                    continue;
+                }
+
+                throw match ($code) {
+                    401, 250003 => new InvalidCredentials('Invalid ' . self::NAME . ' credentials'),
+                    111617, 111056, 111057, 120201, 120512, 121100 => new InvalidShipmentParameters($message ?? 'Invalid Shipment Parameters'),
+                    default => $e,
+                };
+            } catch (\Exception $e) {
+                throw $e;
+            }
+        }
+
+        if ($results->isNotEmpty()) {
+            return $results;
+        }
+
+        throw new ShipmentNotCreated('Unable to create shipment.');
+    }
+
+
 }
