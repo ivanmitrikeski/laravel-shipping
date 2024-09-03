@@ -254,6 +254,10 @@ class ServiceFedEx extends ServiceProvider
                 default => $e,
             };
         } catch (Exception $e) {
+            if (str_contains($e->getMessage(), 'credentials were not valid')) {
+                throw new InvalidCredentials('Invalid ' . self::NAME . ' credentials');
+            }
+
             throw $e;
         }
 
@@ -328,8 +332,8 @@ class ServiceFedEx extends ServiceProvider
                 "shipper" => [
                     "contact" => [
                         "personName" => $shipFrom->name(),
-                        "phoneNumber" => $shipFrom->phone(),
-                        "phoneExtension" => $shipFrom->phone()->extension(),
+                        "phoneNumber" => $shipFrom->phone() . '',
+                        "phoneExtension" => $shipFrom->phone()->extension() . '',
                         "emailAddress" => $shipFrom->email(),
                         "company" => $shipFrom->company(),
                     ],
@@ -348,7 +352,7 @@ class ServiceFedEx extends ServiceProvider
                     [
                         "contact" => [
                             "personName" => $shipTo->name(),
-                            "phoneNumber" => $shipTo->phone(),
+                            "phoneNumber" => $shipTo->phone() . '',
                             "emailAddress" => $shipFrom->email(),
                             "company" => $shipFrom->company(),
                         ],

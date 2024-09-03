@@ -233,6 +233,8 @@ class ServiceCanadaPost extends ServiceProvider
 
         $results = new ServiceProviderShipmentCollection();
 
+        $group = time();
+
         /** @var BoxInterface $box */
         foreach ($boxes as $box) {
             // The weight of the parcel in kilograms. (99.999)
@@ -245,7 +247,7 @@ class ServiceCanadaPost extends ServiceProvider
             rsort($dimensions, SORT_NUMERIC);
 
             $body = [
-                'group-id' => 'grp1',
+                'group-id' => $group,
                 'requested-shipping-point' => $shipFrom->address()->postalCode(),
                 'cpc-pickup-indicator' => true,
                 'expected-mailing-date' => $shipFrom->shipDate()->format('Y-m-d'),
