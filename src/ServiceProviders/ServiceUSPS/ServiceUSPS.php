@@ -315,11 +315,18 @@ class ServiceUSPS extends ServiceProvider
             };
         }
 
+	if(isset($array['IntlRateV2Response'])) {
+            $package = $array['IntlRateV2Response']['Package'] ?? $array['RateV4Response']['Package'] ?? [];
+            $services = $array['IntlRateV2Response']['Package']['Service'] ?? $array['RateV4Response']['Package']['Postage'] ?? [];
 
-        $package = $array['IntlRateV2Response']['Package'] ?? $array['RateV4Response']['Package'] ?? [];
-        $services = $array['IntlRateV2Response']['Package']['Service'] ?? $array['RateV4Response']['Package']['Postage'] ?? [];
+            $country = isset($array['IntlRateV2Response']) ? 'US' : 'International';
+	}
+	elseif(isset($array['RateV4Response'])) {
+            $package = $array['RateV4Response']['Package'] ?? $array['RateV4Response']['Package'] ?? [];
+            $services = $array['RateV4Response']['Package']['Service'] ?? $array['RateV4Response']['Package']['Postage'] ?? [];
 
-        $country = isset($array['IntlRateV2Response']) ? 'US' : 'International';
+            $country = 'US';
+        }    
 
         $packages = [];
         if ($boxes->count() > 1) {
