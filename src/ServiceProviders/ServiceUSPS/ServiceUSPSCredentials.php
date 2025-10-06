@@ -14,8 +14,8 @@ class ServiceUSPSCredentials extends Credentials implements CredentialsInterface
      * @param bool $test
      */
     public function __construct(
-        private readonly string $username,
-        private readonly string $password,
+        private readonly string $clientId,
+        private readonly string $clientSecret,
         private readonly bool $test = false
     )
     {
@@ -25,17 +25,17 @@ class ServiceUSPSCredentials extends Credentials implements CredentialsInterface
     /**
      * @return string
      */
-    public function username(): string
+    public function clientId(): string
     {
-        return $this->username;
+        return $this->clientId;
     }
 
     /**
      * @return string
      */
-    public function password(): string
+    public function clientSecret(): string
     {
-        return $this->password;
+        return $this->clientSecret;
     }
 
     public function test(): bool

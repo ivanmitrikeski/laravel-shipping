@@ -3,20 +3,20 @@ Supported shipping providers:
 - UPS REST/OAuth API
 - FedEx REST/OAuth API
 - Canada Post
-- USPS
+- USPS API v3
 - Purolator
 
 Package can be used outside the Laravel environment as well (by making individual shipping provider requests).
 
 Supported API services:
 
-| Shipping Provider | Rate API | Shipment API |
-|:------------------|:--------:|:------------:|
-| UPS REST          |    ✓     |      ✓       |
-| FedEx REST        |    ✓     |      ✓       |
-| Canada Post       |    ✓     |      ✓       |
-| Purolator         |    ✓     |      ✓       |
-| USPS              |    ✓     |      -       |
+| Shipping Provider |       Rate API        | Shipment API |
+|:------------------|:---------------------:|:------------:|
+| UPS REST          |           ✓           |      ✓       |
+| FedEx REST        |           ✓           |      ✓       |
+| Canada Post       |           ✓           |      ✓       |
+| Purolator         |           ✓           |      ✓       |
+| USPS API v3       | ✓ (Shipping Options 3.0) |      -       |
 
 ### Install package
 ```bash
@@ -46,8 +46,8 @@ UPS_CLIENT_SECRET=
 UPS_USER_ID=
 UPS_ACCOUNT_NUMBER=
 
-USPS_USERNAME=
-USPS_PASSWORD=
+USPS_CLIENT_ID=
+USPS_CLIENT_SECRET=
 
 FEDEX_CLIENT_ID=
 FEDEX_CLIENT_SECRET=
@@ -239,7 +239,7 @@ use Mitrik\Shipping\ServiceProviders\Box\BoxMetric;
 use Mitrik\Shipping\ServiceProviders\ServiceUSPS\ServiceUSPS;
 use Mitrik\Shipping\ServiceProviders\ServiceUSPS\ServiceUSPSCredentials;
 
-$credentials = new ServiceUSPSCredentials(env('USPS_USERNAME'), env('USPS_PASSWORD'));
+$credentials = new ServiceUSPSCredentials(env('USPS_CLIENT_ID'), env('USPS_CLIENT_SECRET'));
 $usps = new ServiceUSPS($credentials);
 
 $rates = $usps->rate(
@@ -660,8 +660,8 @@ Update phpunit.xml env variables before running tests.
     <env name="FEDEX_CLIENT_SECRET" value=""/>
     <env name="FEDEX_ACCOUNT_NUMBER" value=""/>
     
-    <env name="USPS_USERNAME" value=""/>
-    <env name="USPS_PASSWORD" value=""/>
+    <env name="USPS_CLIENT_ID" value=""/>
+    <env name="USPS_CLIENT_SECRET" value=""/>
     
     <env name="SHIPPING_SANDBOX" value="true"/>
 </php>

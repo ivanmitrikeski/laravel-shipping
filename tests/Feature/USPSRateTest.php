@@ -11,7 +11,9 @@ use Mitrik\Shipping\ServiceProviders\ServiceUSPS\ServiceUSPSCredentials;
 use Mitrik\Shipping\ServiceProviders\Exceptions\BoxOverweight;
 use Mitrik\Shipping\ServiceProviders\Exceptions\InvalidCredentials;
 use Mitrik\Shipping\ServiceProviders\Exceptions\InvalidShipmentParameters;
-use PHPUnit\Framework\TestCase;
+use Mitrik\Shipping\Tests\TestCase;
+
+//use PHPUnit\Framework\TestCase;
 
 /**
  *
@@ -28,7 +30,7 @@ class USPSRateTest extends TestCase
      */
     public function test_usps_domestic_shipping_rate_response()
     {
-        $credentials = new ServiceUSPSCredentials(env('USPS_USERNAME'), env('USPS_PASSWORD'), env('SHIPPING_SANDBOX'));
+        $credentials = new ServiceUSPSCredentials(env('USPS_CLIENT_ID'), env('USPS_CLIENT_SECRET'), env('SHIPPING_SANDBOX'));
         $usps = new ServiceUSPS($credentials);
 
         $rates = $usps->rate(
@@ -72,7 +74,7 @@ class USPSRateTest extends TestCase
      */
     public function test_usps_domestic_shipping_international_rate_response()
     {
-        $credentials = new ServiceUSPSCredentials(env('USPS_USERNAME'), env('USPS_PASSWORD'), env('SHIPPING_SANDBOX'));
+        $credentials = new ServiceUSPSCredentials(env('USPS_CLIENT_ID'), env('USPS_CLIENT_SECRET'), env('SHIPPING_SANDBOX'));
         $usps = new ServiceUSPS($credentials);
 
         $rates = $usps->rate(
@@ -113,7 +115,7 @@ class USPSRateTest extends TestCase
      */
     public function test_usps_domestic_shipping_rates_response()
     {
-        $credentials = new ServiceUSPSCredentials(env('USPS_USERNAME'), env('USPS_PASSWORD'), env('SHIPPING_SANDBOX'));
+        $credentials = new ServiceUSPSCredentials(env('USPS_CLIENT_ID'), env('USPS_CLIENT_SECRET'), env('SHIPPING_SANDBOX'));
         $usps = new ServiceUSPS($credentials);
 
         $rates = $usps->rates(
@@ -160,7 +162,7 @@ class USPSRateTest extends TestCase
     {
         $this->expectException(BoxOverweight::class);
 
-        $credentials = new ServiceUSPSCredentials(env('USPS_USERNAME'), env('USPS_PASSWORD'), env('SHIPPING_SANDBOX'));
+        $credentials = new ServiceUSPSCredentials(env('USPS_CLIENT_ID'), env('USPS_CLIENT_SECRET'), env('SHIPPING_SANDBOX'));
         $usps = new ServiceUSPS($credentials);
 
         $rates = $usps->rate(
@@ -248,7 +250,7 @@ class USPSRateTest extends TestCase
     {
         $this->expectException(InvalidShipmentParameters::class);
 
-        $credentials = new ServiceUSPSCredentials(env('USPS_USERNAME'), env('USPS_PASSWORD'), env('SHIPPING_SANDBOX'));
+        $credentials = new ServiceUSPSCredentials(env('USPS_CLIENT_ID'), env('USPS_CLIENT_SECRET'), env('SHIPPING_SANDBOX'));
         $usps = new ServiceUSPS($credentials);
 
         $rates = $usps->rate(
@@ -275,7 +277,7 @@ class USPSRateTest extends TestCase
                 'CA'
             ),
             new BoxCollection([
-                new BoxMetric(200, 100, 500, 1)
+                new BoxMetric(0, 0, 0, 0)
             ])
         );
     }
