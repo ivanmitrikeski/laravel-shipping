@@ -8,6 +8,7 @@ use Mitrik\Shipping\ServiceProviders\Credentials\CredentialsInterface;
 
 class ServiceCanadaPostCredentials extends Credentials implements CredentialsInterface
 {
+    private ?string $zonosAccountKey = null;
 
     /**
      * @param string $customerNumber
@@ -76,4 +77,15 @@ class ServiceCanadaPostCredentials extends Credentials implements CredentialsInt
 
         return $result;
     }
+
+    public function setZonosAccountKey(?string $key): void
+    {
+        $this->zonosAccountKey = $key;
+    }
+
+    public function zonosAccountKey(): ?string
+    {
+        return $this->zonosAccountKey;
+    }
+
 }

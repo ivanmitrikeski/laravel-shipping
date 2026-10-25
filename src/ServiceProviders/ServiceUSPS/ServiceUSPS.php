@@ -193,11 +193,18 @@ class ServiceUSPS extends ServiceProvider
                 ]
             ];
 
-            if ($addressFrom->countryCodeIso2() !== 'US' || $addressTo->countryCodeIso2() !== 'US') {
+            if ($addressTo->countryCodeIso2() === 'US') {
+                $request['destinationZIPCode'] = $addressTo->postalCode();
+                $request['destinationEntryFacilityType'] = 'NONE';
+            } else {
                 $request['destinationCountryCode'] = $addressTo->countryCodeIso2();
                 $request['foreignPostalCode'] = $addressTo->postalCode();
                 $request['packageDescription']['mailClass'] = 'ALL';
-                unset($request['destinationZIPCode']);
+
+                unset(
+                    $request['destinationZIPCode'],
+                    $request['destinationEntryFacilityType']
+                );
             }
 
             $response = Http::withToken($token)

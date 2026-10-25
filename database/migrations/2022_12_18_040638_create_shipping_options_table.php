@@ -15,10 +15,10 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('shipping_options', function (Blueprint $table) {
+        Schema::create(config('shipping.table_prefix', 'laravel_shipping_') . 'shipping_options', function (Blueprint $table) {
             $table->id();
             $table->uuid()->index();
-            $table->foreignIdFor(ShippingService::class)->constrained();
+            $table->foreignIdFor(ShippingService::class)->constrained(config('shipping.table_prefix', 'laravel_shipping_') . 'shipping_services');
             $table->string('code');
             $table->string('name');
             $table->boolean('is_enabled')->default(true)->index();
@@ -65,6 +65,6 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('shipping_options');
+        Schema::dropIfExists(config('shipping.table_prefix', 'laravel_shipping_') . 'shipping_options');
     }
 };

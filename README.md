@@ -56,6 +56,36 @@ FEDEX_ACCOUNT_NUMBER=
 SHIPPING_SANDBOX=false
 ```
 
+### Database Table Prefix
+
+By default, Laravel Shipping adds `laravel_shipping_` to all database table names to avoid conflicts with existing tables.
+
+You can change the prefix in your `.env` file:
+
+```env
+LARAVEL_SHIPPING_TABLE_PREFIX=custom_prefix_
+```
+
+#### Upgrading from an Older Version
+
+Older versions of Laravel Shipping created tables without a prefix.
+
+If you already use Laravel Shipping, add this to your `.env` file before updating:
+
+```env
+LARAVEL_SHIPPING_TABLE_PREFIX=
+```
+
+This keeps your existing table names, so you don't need to rename any tables.
+
+If your application uses cached configuration, run:
+
+```bash
+php artisan config:clear
+```
+
+**New installations:** No changes are needed. The default prefix is `laravel_shipping_`.
+
 ### Using sandbox credentials
 
 In order to use test credentials just add param "true" in the *Credentials() object or set environment variable SHIPPING_SANDBOX=false.
@@ -197,7 +227,7 @@ use Mitrik\Shipping\ServiceProviders\Box\BoxMetric;
 use Mitrik\Shipping\ServiceProviders\ServiceUPS\ServiceUPS;
 use Mitrik\Shipping\ServiceProviders\ServiceUPS\ServiceUPSCredentials;
 
-$credentials = new ServiceUPSCredentials(env('UPS_ACCESS_KEY'), env('UPS_USER_ID'), env('UPS_PASSWORD'));
+$credentials = new ServiceUPSCredentials(env('UPS_CLIENT_ID'), env('UPS_CLIENT_SECRET'), env('UPS_USER_ID'), env('UPS_ACCOUNT_NUMBER'));
 $serviceUPS = new ServiceUPS($credentials);
 
 $rates = $serviceUPS->rate(

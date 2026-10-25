@@ -23,4 +23,11 @@ class ServiceProviderRateCollection extends Collection
         $this->push($serviceProviderRate);
         return $this;
     }
+
+    public function sortByPrice(): self
+    {
+        return $this->sortBy(
+            fn (ServiceProviderRate $rate) => $rate->price()
+        )->values();
+    }
 }

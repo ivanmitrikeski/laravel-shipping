@@ -10,7 +10,7 @@ use Mitrik\Shipping\ServiceProviders\Exceptions\BoxOverweight;
 use Mitrik\Shipping\ServiceProviders\Exceptions\PriceNotFound;
 use Mitrik\Shipping\ServiceProviders\ServiceFlat\ServiceFlat;
 use Mitrik\Shipping\ServiceProviders\ServiceProviderRate\ServiceProviderRate;
-use PHPUnit\Framework\TestCase;
+use Mitrik\Shipping\Tests\TestCase;
 
 /**
  *

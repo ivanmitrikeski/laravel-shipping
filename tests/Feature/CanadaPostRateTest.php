@@ -165,12 +165,12 @@ class CanadaPostRateTest extends TestCase
                 'Ivan',
                 'Mitrikeski',
                 '',
-                'Panoramastrasse 1A',
+                '1 Downing Street',
                 '',
-                'Berlin',
-                '10178',
+                'London',
+                'SW1A1AA',
                 '',
-                'DE'
+                'GB'
             ),
             new BoxCollection([
                 new BoxMetric(20, 10, 5, 1)
@@ -452,6 +452,12 @@ class CanadaPostRateTest extends TestCase
      */
     public function test_canadapost_domestic_shipping_us_shipment_response()
     {
+        if (!getenv('CANADA_POST_ZONOS_KEY')) {
+            $this->markTestSkipped(
+                'Zonos account key required for US shipments.'
+            );
+        }
+
         $credentials = new ServiceCanadaPostCredentials($this->customerNumber, $this->username, $this->password, env('SHIPPING_SANDBOX'));
         $canadaPost = new ServiceCanadaPost($credentials);
 
@@ -509,6 +515,8 @@ class CanadaPostRateTest extends TestCase
                                 'sku' => 'SKU12345',
                                 'unit-weight' => 1,
                                 'customs-value-per-unit' => 1,
+                                'country-of-origin' => 'CA',
+                                'province-of-origin' => 'ON',
                             ]
                         ]
                     ],
@@ -568,12 +576,12 @@ class CanadaPostRateTest extends TestCase
                     'John',
                     'Smith',
                     '',
-                    'Panoramastrasse 1A',
+                    '1 Downing Street',
                     '',
-                    'Berlin',
-                    '10178',
-                    'BRG',
-                    'DE'
+                    'London',
+                    'SW1A1AA',
+                    '',
+                    'GB'
                 ),
                 new Phone('+1', '555', '1231234')
             ),
@@ -597,6 +605,8 @@ class CanadaPostRateTest extends TestCase
                                 'sku' => 'SKU12345',
                                 'unit-weight' => 1,
                                 'customs-value-per-unit' => 1,
+                                'country-of-origin' => 'CA',
+                                'province-of-origin' => 'ON',
                             ]
                         ]
                     ],

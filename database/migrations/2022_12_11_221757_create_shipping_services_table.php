@@ -14,7 +14,7 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('shipping_services', function (Blueprint $table) {
+        Schema::create(config('shipping.table_prefix', 'laravel_shipping_') . 'shipping_services', function (Blueprint $table) {
             $table->id();
             $table->uuid()->index();
             $table->string('name')->index();
@@ -82,6 +82,6 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('shipping_services');
+        Schema::dropIfExists(config('shipping.table_prefix', 'laravel_shipping_') . 'shipping_services');
     }
 };

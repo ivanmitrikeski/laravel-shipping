@@ -8,7 +8,7 @@ use Mitrik\Shipping\Facades\Shipping;
 use Mitrik\Shipping\ServiceProviders\Address\Address;
 use Mitrik\Shipping\ServiceProviders\Box\BoxCollection;
 use Mitrik\Shipping\ServiceProviders\Box\BoxMetric;
-use PHPUnit\Framework\TestCase;
+use Mitrik\Shipping\Tests\TestCase;
 
 /**
  *

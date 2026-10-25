@@ -18,12 +18,12 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('shipping_option_prices', function (Blueprint $table) {
+        Schema::create(config('shipping.table_prefix', 'laravel_shipping_') . 'shipping_option_prices', function (Blueprint $table) {
             $table->id();
             $table->uuid()->index();
-            $table->foreignIdFor(ShippingService::class)->constrained();
-            $table->foreignIdFor(ShippingOption::class)->constrained();
-            $table->foreignIdFor(ShippingBox::class)->constrained();
+            $table->foreignIdFor(ShippingService::class)->constrained(table: config('shipping.table_prefix', 'laravel_shipping_') . 'shipping_services', indexName: 'ls_sop_ss_id');
+            $table->foreignIdFor(ShippingOption::class)->constrained(table: config('shipping.table_prefix', 'laravel_shipping_') . 'shipping_options', indexName: 'ls_sop_so_id');
+            $table->foreignIdFor(ShippingBox::class)->constrained(table: config('shipping.table_prefix', 'laravel_shipping_') . 'shipping_boxes', indexName: 'ls_sop_sb_id');
             $table->double('price', 10, 2)->nullable();
             $table->timestamps();
             $table->softDeletes();
@@ -53,6 +53,6 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('shipping_option_prices');
+        Schema::dropIfExists(config('shipping.table_prefix', 'laravel_shipping_')  . 'shipping_option_prices');
     }
 };

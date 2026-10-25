@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 use Mitrik\Shipping\ServiceProviders\Box\BoxMetric;
+use Mitrik\Shipping\Traits\UsesShippingTablePrefix;
 use Mitrik\Shipping\Traits\UUID;
 
 /**
@@ -41,7 +42,7 @@ use Mitrik\Shipping\Traits\UUID;
  */
 class ShippingBox extends Model
 {
-    use HasFactory, UUID, SoftDeletes;
+    use HasFactory, SoftDeletes, UsesShippingTablePrefix, UUID;
 
     /**
      * @var string[]

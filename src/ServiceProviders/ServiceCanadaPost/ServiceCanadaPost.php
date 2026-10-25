@@ -308,6 +308,11 @@ class ServiceCanadaPost extends ServiceProvider
                 ],
             ];
 
+            $body['delivery-spec']['destination']['address-details'] = array_filter(
+                $body['delivery-spec']['destination']['address-details'],
+                static fn ($value) => $value !== null && $value !== ''
+            );
+
             if (!empty($shipTo->email())) {
                 $body += [
                     'delivery-spec' => [
@@ -348,12 +353,18 @@ class ServiceCanadaPost extends ServiceProvider
             $url = $this->credentials->test() ? 'https://ct.soa-gw.canadapost.ca/rs/' . $this->credentials->customerNumber() . '/' . $this->credentials->customerNumber() . '/shipment' : 'https://soa-gw.canadapost.ca/rs/' . $this->credentials->customerNumber() . '/' . $this->credentials->customerNumber() . '/shipment';
 
             try {
+                $headers = [
+                    'Content-Type' => 'application/vnd.cpc.shipment-v8+xml',
+                    'Accept' => 'application/vnd.cpc.shipment-v8+xml',
+                ];
+
+                if ($key = $this->credentials->zonosAccountKey()) {
+                    $headers['X-CPC-Zonos-Key'] = $key;
+                }
+
                 $response = $client->request('POST', $url, [
                     'auth' => [$this->credentials->username(), $this->credentials->password()],
-                    'headers' => [
-                        'Content-Type' => 'application/vnd.cpc.shipment-v8+xml',
-                        'Accept' => 'application/vnd.cpc.shipment-v8+xml',
-                    ],
+                    'headers' => $headers,
                     'body' => $xmlString
                 ]);
             } catch (ClientException $e) {

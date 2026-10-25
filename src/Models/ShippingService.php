@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 use Mitrik\Shipping\ServiceProviders\ServiceProvider;
+use Mitrik\Shipping\Traits\UsesShippingTablePrefix;
 use Mitrik\Shipping\Traits\UUID;
 
 /**
@@ -45,7 +46,7 @@ use Mitrik\Shipping\Traits\UUID;
  */
 class ShippingService extends Model
 {
-    use HasFactory, UUID, SoftDeletes;
+    use HasFactory, SoftDeletes, UsesShippingTablePrefix, UUID;
 
     /**
      * @var string[]

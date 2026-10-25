@@ -14,7 +14,7 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('shipping_boxes', function (Blueprint $table) {
+        Schema::create(config('shipping.table_prefix', 'laravel_shipping_') . 'shipping_boxes', function (Blueprint $table) {
             $table->id();
             $table->uuid()->index();
             $table->double('length');
@@ -56,6 +56,6 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('shipping_boxes');
+        Schema::dropIfExists(config('shipping.table_prefix', 'laravel_shipping_') . 'shipping_boxes');
     }
 };
